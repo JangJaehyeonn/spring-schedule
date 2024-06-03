@@ -1,64 +1,75 @@
 package com.sparta.schedule.service;
 
-import com.sparta.schedule.dto.ScheduleRequestDto;
-import com.sparta.schedule.dto.ScheduleResponseDto;
-import com.sparta.schedule.entity.Schedule;
+import com.sparta.schedule.dto.ScheduleCreateRequest;
+import com.sparta.schedule.dto.ScheduleDeleteRequest;
+import com.sparta.schedule.dto.ScheduleResponse;
+import com.sparta.schedule.dto.ScheduleUpdateRequest;
+import com.sparta.schedule.exception.DataNotFoundException;
+import com.sparta.schedule.model.Schedule;
 import com.sparta.schedule.repository.ScheduleRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ScheduleService {
 
-    private final ScheduleRepository scheduleRepository;
+    private final ScheduleRepository repository;
 
-    public ScheduleService(ScheduleRepository scheduleRepository) {
-        this.scheduleRepository = scheduleRepository;
+    public ScheduleResponse findById(long id) {
+        return ScheduleResponse.toDto(findScheduleById(id));
     }
 
-    public ScheduleResponseDto createSchedule(ScheduleRequestDto requestDto) {
-        // RequestDto -> Entity
-        Schedule schedule = new Schedule(requestDto);
-
-        // DB 저장
-        Schedule saveSchedule = scheduleRepository.save(schedule);
-
-        // Entity -> ResponseDto
-        ScheduleResponseDto scheduleResponseDto = new ScheduleResponseDto(schedule);
-
-        return scheduleResponseDto;
+    protected Schedule findScheduleById(long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("해당 Id에 맞는 일정을 찾을 수 없습니다."));
     }
 
-    public List<ScheduleResponseDto> getSchedules() {
-        // DB 조회
-        return scheduleRepository.findAll();
+    @Transactional
+    public ScheduleResponse save(ScheduleCreateRequest request) {
+        Schedule schedule = repository.save(request.toEntity());
+        return ScheduleResponse.toDto(schedule);
     }
 
-    public Long updateSchedule(Long id, ScheduleRequestDto requestDto) {
+    public List<ScheduleResponse> findAll() {
+        List<Schedule> list = repository.findAll();
+        return list
+                .stream()
+                .sorted(Comparator.comparing(Schedule::getCreatedAt).reversed())
+                .map(ScheduleResponse::toDto)
+                .toList();
+    }
 
-        // 해당 메모가 DB에 존재하는지 확인
-        Schedule schedule = scheduleRepository.findById(id);
-        if(schedule != null) {
-            // schedule 내용 수정
-            scheduleRepository.update(id, requestDto);
+    @Transactional
+    public ScheduleResponse update(long scheduleId, ScheduleUpdateRequest request) {
+        Schedule schedule = findScheduleById(scheduleId);
 
-            return id;
-        } else {
-            throw new IllegalArgumentException("선택한 메모는 존재하지 않습니다.");
+        if (!schedule.getPassword().equals(request.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 맞지 않습니다.");
         }
+
+        schedule.update(request.getTitle(), request.getDescription());
+        return ScheduleResponse.toDto(schedule);
     }
 
-    public Long deleteSchedule(Long id) {
-        // 해당 메모가 DB에 존재하는지 확인
-        Schedule schedule = scheduleRepository.findById(id);
-        if(schedule != null) {
-            // memo 삭제
-            scheduleRepository.delete(id);
+    @Transactional
+    public void delete(long scheduleId, ScheduleDeleteRequest request) {
+        Schedule schedule = findScheduleById(scheduleId);
 
-            return id;
-        } else {
-            throw new IllegalArgumentException("선택한 메모는 존재하지 않습니다.");
+        if (!Objects.equals(schedule.getPassword(), request.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 맞지 않습니다.");
         }
+
+        if (!Objects.equals(schedule.getUsername(), request.getUsername())) {
+            throw new IllegalArgumentException("사용자 이름이 동일하지 않습니다.");
+        }
+
+        repository.delete(schedule);
     }
 }
