@@ -1,0 +1,40 @@
+package com.sparta.schedule.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Getter
+@NoArgsConstructor
+public class Comment extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "공백이거나 null인 것은 불가합니다.")
+    private String comment;
+
+    @Column(length = 100)
+    @Email
+    private String username;
+
+    @ManyToOne
+    @JoinColumn(name = "schedule_id")
+    private Schedule schedule;
+    //일정 1개, 댓글 N개
+    //ex) 게시물 1개, 댓글 N개
+
+    public Comment(String comment, String username, Schedule schedule) {
+        this.comment = comment;
+        this.username = username;
+        this.schedule = schedule;
+    }
+
+    public void update(String comment) {
+        this.comment = comment;
+    }
+}
