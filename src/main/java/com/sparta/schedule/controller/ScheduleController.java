@@ -1,43 +1,58 @@
 package com.sparta.schedule.controller;
 
-import com.sparta.schedule.dto.ScheduleRequestDto;
-import com.sparta.schedule.dto.ScheduleResponseDto;
+import com.sparta.schedule.dto.ScheduleCreateRequest;
+import com.sparta.schedule.dto.ScheduleDeleteRequest;
+import com.sparta.schedule.dto.ScheduleResponse;
+import com.sparta.schedule.dto.ScheduleUpdateRequest;
 import com.sparta.schedule.service.ScheduleService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/schedule")
+@RequiredArgsConstructor
 public class ScheduleController {
-//ScheduleController > ScheduleService > ScheduleRepository
-    private final ScheduleService scheduleService;
 
-    public ScheduleController(ScheduleService scheduleService) {
-        this.scheduleService = scheduleService;
+    private final ScheduleService service;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ScheduleResponse> findById(@PathVariable(name = "id") long id) {
+        return ResponseEntity.ok()
+                .body(service.findById(id));
     }
 
-    @PostMapping("/schedules")
-    public ScheduleResponseDto createSchedule(@RequestBody ScheduleRequestDto requestDto) {
-
-        return scheduleService.createSchedule(requestDto);
-
+    @GetMapping
+    public ResponseEntity<List<ScheduleResponse>> findAll() {
+        return ResponseEntity.ok()
+                .body(service.findAll());
     }
 
-    @GetMapping("/schedules")
-    public List<ScheduleResponseDto> getSchedules() {
-        return scheduleService.getSchedules();
-        // DB 조회
+    @PostMapping
+    public ResponseEntity<ScheduleResponse> create(
+            @Valid @RequestBody ScheduleCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.save(request));
     }
 
-    @PutMapping("/schedules/{id}")
-    public Long updateSchedule(@PathVariable Long id, @RequestBody ScheduleRequestDto requestDto) {
-        return scheduleService.updateSchedule(id, requestDto);
-        //DB 수정
+    @PatchMapping("/{scheduleId}")
+    public ResponseEntity<ScheduleResponse> update(
+            @PathVariable(name = "scheduleId") long scheduleId,
+            @Valid @RequestBody ScheduleUpdateRequest request) {
+
+        return ResponseEntity.ok().body(service.update(scheduleId, request));
     }
 
-    @DeleteMapping("/schedules/{id}")
-    public Long deleteSchedule(@PathVariable Long id) {
-        return scheduleService.deleteSchedule(id);
+    @DeleteMapping("/{scheduleId}")
+    public ResponseEntity<String> delete(
+            @PathVariable(name = "scheduleId") long scheduleId,
+            @Valid @RequestBody ScheduleDeleteRequest request) {
+
+        service.delete(scheduleId, request);
+        return ResponseEntity.ok()
+                .body("성공적으로 삭제되었습니다.");
     }
 }
